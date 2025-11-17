@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { db, auth } from "../firebase/config";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 
-export default function AddUser({ onUserAdded }) {
+export default function AddUser({ onUserAdded, defaultCategoria = "Piscinas" }) {
   const [nome, setNome] = useState("");
   const [contacto, setContacto] = useState("");
   const [dataExpiracao, setDataExpiracao] = useState("");
+  const [categoria, setCategoria] = useState(defaultCategoria);
   const [dateError, setDateError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -19,7 +20,10 @@ export default function AddUser({ onUserAdded }) {
 
   const handleNomeChange = (e) => {
     const value = e.target.value;
-    if (regexName.test(value)) setNome(value);
+    // Verifica se cumpre o regex E se tem no máximo 30 caracteres
+    if (regexName.test(value) && value.length <= 30) {
+      setNome(value);
+    }
   };
 
   const handleContactoChange = (e) => {
@@ -31,6 +35,11 @@ export default function AddUser({ onUserAdded }) {
   const handleDateChange = (e) => {
     const value = e.target.value;
     setDataExpiracao(value);
+
+    if (!value) {
+      setDateError("");
+      return;
+    }
 
     const selected = new Date(value);
     const min = new Date(minDate);
@@ -44,6 +53,7 @@ export default function AddUser({ onUserAdded }) {
 
   const handleAddUser = async (e) => {
     e.preventDefault();
+    setMessage("");
 
     if (!nome || !contacto || !dataExpiracao) {
       setMessage("Preencha todos os campos");
@@ -84,6 +94,7 @@ export default function AddUser({ onUserAdded }) {
         userId: auth.currentUser.uid,
         nome,
         contacto,
+        categoria,
         dataExpiracao: Timestamp.fromDate(selected),
         createdAt: Timestamp.now(),
       });
@@ -93,6 +104,7 @@ export default function AddUser({ onUserAdded }) {
       setContacto("");
       setDataExpiracao("");
       setDateError("");
+      setCategoria(defaultCategoria);
 
       if (onUserAdded) onUserAdded();
     } catch (err) {
@@ -103,73 +115,90 @@ export default function AddUser({ onUserAdded }) {
 
   return (
     <div style={{ marginBottom: "20px" }}>
-      <h3>Adicionar Usuário</h3>
+      <h3 style={{ marginTop: 0, color: "#333" }}>Adicionar Cliente</h3>
 
       {message && (
-        <p style={{ color: message.includes("sucesso") ? "green" : "red" }}>
+        <p style={{ 
+          color: message.includes("sucesso") ? "green" : "red", 
+          background: message.includes("sucesso") ? "#e6fffa" : "#fff5f5",
+          padding: "8px",
+          borderRadius: "6px",
+          marginBottom: "10px",
+          fontWeight: "500"
+        }}>
           {message}
         </p>
       )}
 
       <form
         onSubmit={handleAddUser}
-        style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+        style={{ display: "flex", flexDirection: "column", gap: "12px" }}
       >
         <input
           type="text"
-          placeholder="Nome"
+          placeholder="Nome (máx. 30 caracteres)"
           value={nome}
           onChange={handleNomeChange}
-          style={{
-            padding: "8px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-          }}
+          maxLength={30} // Limite nativo do input
+          style={inputStyle}
         />
 
-        <input
-          type="text"
-          placeholder="Contato (9 dígitos)"
-          value={contacto}
-          onChange={handleContactoChange}
-          maxLength={9}
-          style={{
-            padding: "8px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-          }}
-        />
+        <div style={{ display: "flex", gap: "10px" }}>
+            <input
+            type="text"
+            placeholder="Contacto (9 dígitos)"
+            value={contacto}
+            onChange={handleContactoChange}
+            maxLength={9}
+            style={{ ...inputStyle, flex: 1 }}
+            />
+
+            <select 
+                value={categoria} 
+                onChange={(e) => setCategoria(e.target.value)} 
+                style={{ ...inputStyle, flex: 1 }}
+            >
+                <option value="Piscinas">Piscinas</option>
+                <option value="Jardins">Jardins</option>
+            </select>
+        </div>
 
         <input
           type="date"
           value={dataExpiracao}
           min={minDate}
           onChange={handleDateChange}
-          style={{
-            padding: "8px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-          }}
+          style={inputStyle}
         />
 
         {dateError && (
-          <p style={{ color: "red", fontSize: "0.9rem" }}>{dateError}</p>
+          <p style={{ color: "red", fontSize: "0.9rem", margin: 0 }}>{dateError}</p>
         )}
 
         <button
           type="submit"
           style={{
-            padding: "10px",
+            padding: "12px",
             backgroundColor: "#6B73FF",
             color: "#fff",
             border: "none",
-            borderRadius: "6px",
+            borderRadius: "8px",
             cursor: "pointer",
+            fontWeight: "700",
+            marginTop: "4px"
           }}
         >
-          Adicionar
+          Adicionar Cliente
         </button>
       </form>
     </div>
   );
 }
+
+const inputStyle = {
+  padding: "10px",
+  borderRadius: "8px",
+  border: "1px solid #cbd5e0",
+  fontSize: "14px",
+  outline: "none"
+};

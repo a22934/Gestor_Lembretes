@@ -5,9 +5,11 @@ import { onAuthStateChanged } from "firebase/auth";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
+import DashboardMain from "./pages/DashboardMain";
+import PiscinasPage from "./pages/PiscinasPage";
+import JardinsPage from "./pages/JardinsPage";
 
-function App() {
+export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,11 +27,19 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
+
       <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
-      <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
+
+      {/* Dashboard principal (resumo + botões) */}
+      <Route path="/dashboard" element={user ? <DashboardMain /> : <Navigate to="/login" />} />
+
+      {/* Páginas por categoria */}
+      <Route path="/dashboard/piscinas" element={user ? <PiscinasPage /> : <Navigate to="/login" />} />
+      <Route path="/dashboard/jardins" element={user ? <JardinsPage /> : <Navigate to="/login" />} />
+
+      {/* catch-all -> se não logado vai para login */}
+      <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
     </Routes>
   );
 }
-
-export default App;
