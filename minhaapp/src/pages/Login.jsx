@@ -40,7 +40,7 @@ export default function Login() {
               <path d="M20 8C13.372 8 8 13.372 8 20C8 26.628 13.372 32 20 32C26.628 32 32 26.628 32 20C32 13.372 26.628 8 20 8ZM20 28C16.686 28 14 25.314 14 22C14 18.686 16.686 16 20 16C23.314 16 26 18.686 26 22C26 25.314 23.314 28 20 28Z" fill="#667eea"/>
             </svg>
           </div>
-          <h2 style={styles.title}>Bem-vindo de volta</h2>
+          <h2 style={styles.title}>Bem-vindo</h2>
           <p style={styles.subtitle}>Faça login na sua conta</p>
         </div>
 

@@ -85,7 +85,7 @@ export default function AddUser({ onUserAdded, defaultCategoria = "Piscinas" }) 
     }
 
     if (!auth.currentUser) {
-      setMessage("Usuário não está logado");
+      setMessage("Utilizador não está logado");
       return;
     }
 
@@ -99,7 +99,7 @@ export default function AddUser({ onUserAdded, defaultCategoria = "Piscinas" }) 
         createdAt: Timestamp.now(),
       });
 
-      setMessage("Usuário adicionado com sucesso!");
+      setMessage("Utilizador adicionado com sucesso!");
       setNome("");
       setContacto("");
       setDataExpiracao("");
@@ -108,8 +108,8 @@ export default function AddUser({ onUserAdded, defaultCategoria = "Piscinas" }) 
 
       if (onUserAdded) onUserAdded();
     } catch (err) {
-      console.error("Erro ao adicionar usuário:", err);
-      setMessage("Erro ao adicionar usuário");
+      console.error("Erro ao adicionar utilizador:", err);
+      setMessage("Erro ao adicionar utilizador");
     }
   };
 
