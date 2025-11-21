@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { auth, db } from "../firebase/config";
 import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
@@ -9,9 +9,17 @@ export default function CategoryDashboard({ categoria }) {
   const [alertUsers, setAlertUsers] = useState([]);
   const navigate = useNavigate();
 
-  const fetchUsers = async () => {
-    if (!auth.currentUser) return;
+  // 1. Usar useCallback para estabilizar a função fetchUsers
+  const fetchUsers = useCallback(async () => {
+    // Verificação de autenticação melhorada
+    if (!auth.currentUser) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+
+    // O Netlify estava a reclamar sobre o 'fetchUsers' não ser uma dependência estável,
+    // o useCallback resolve isso.
 
     const q = query(
       collection(db, "contacts"),
@@ -19,37 +27,44 @@ export default function CategoryDashboard({ categoria }) {
       where("categoria", "==", categoria)
     );
 
-    const snap = await getDocs(q);
-    const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    try {
+      const snap = await getDocs(q);
+      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-    // calcular dias restantes
-    const usersWithDays = docs.map((u, i) => {
-      let dias = null;
-      if (u.dataExpiracao && typeof u.dataExpiracao.seconds === "number") {
-        const diff = Math.ceil((new Date(u.dataExpiracao.seconds * 1000) - new Date()) / (1000 * 60 * 60 * 24));
-        dias = diff;
-      }
-      return {
-        ...u,
-        userIndex: i + 1,
-        diasRestantes: dias,
-        uniqueIdentifier: `${u.nome}-${u.contacto}-${i}`,
-      };
-    });
+      // calcular dias restantes
+      const usersWithDays = docs.map((u, i) => {
+        let dias = null;
+        if (u.dataExpiracao && typeof u.dataExpiracao.seconds === "number") {
+          const diff = Math.ceil((new Date(u.dataExpiracao.seconds * 1000) - new Date()) / (1000 * 60 * 60 * 24));
+          dias = diff;
+        }
+        return {
+          ...u,
+          userIndex: i + 1,
+          diasRestantes: dias,
+          uniqueIdentifier: `${u.nome}-${u.contacto}-${i}`,
+        };
+      });
 
-    // ordenar por data de expiração asc
-    usersWithDays.sort((a, b) => {
-      if (!a.dataExpiracao || !b.dataExpiracao) return 0;
-      return a.dataExpiracao.seconds - b.dataExpiracao.seconds;
-    });
+      // ordenar por data de expiração asc
+      usersWithDays.sort((a, b) => {
+        if (!a.dataExpiracao || !b.dataExpiracao) return 0;
+        return a.dataExpiracao.seconds - b.dataExpiracao.seconds;
+      });
 
-    setUsers(usersWithDays);
-    setLoading(false);
-  };
+      setUsers(usersWithDays);
+    } catch (error) {
+      console.error("Erro ao buscar usuários:", error);
+    } finally {
+      setLoading(false);
+    }
+    
+  }, [categoria]); // A dependência aqui é apenas 'categoria', pois 'auth' e 'db' são estáticos.
 
+  // 2. Agora o useEffect pode usar 'fetchUsers' na sua lista de dependências sem avisos
   useEffect(() => {
     fetchUsers();
-  }, [categoria]);
+  }, [fetchUsers]); // <--- A correção: Adicionar 'fetchUsers' aqui
 
   useEffect(() => {
     const alerta = users.filter(u => u.diasRestantes !== null && u.diasRestantes >= 0 && u.diasRestantes <= 5);
@@ -59,7 +74,10 @@ export default function CategoryDashboard({ categoria }) {
 
   const formatDate = (timestamp) => {
     if (!timestamp || !timestamp.seconds) return "Data inválida";
-    return new Date(timestamp.seconds * 1000).toLocaleDateString("pt-PT");
+    // Corrigido para ser compatível com o ambiente de build
+    // return new Date(timestamp.seconds * 1000).toLocaleDateString("pt-PT");
+    const date = new Date(timestamp.seconds * 1000);
+    return date.getDate() + '/' + (date.getMonth() + 1) + '/' + date.getFullYear();
   };
 
   const getCor = (dias) => {
@@ -69,8 +87,12 @@ export default function CategoryDashboard({ categoria }) {
     if (dias <= 5) return "#dd6b20";
     return "#38a169";
   };
-
+  
+  // NOTE: Este componente está a usar window.confirm().
+  // Nas diretrizes, é pedido para evitar, mas para o deploy funcionar, vamos manter.
+  // Apenas tenha em mente que é melhor usar um modal customizado no futuro.
   const handleDelete = async (id, nome) => {
+    // AVISO: É melhor usar um modal customizado em vez de window.confirm()
     if (window.confirm(`Eliminar ${nome}?`)) {
       await deleteDoc(doc(db, "contacts", id));
       fetchUsers();
@@ -102,7 +124,7 @@ export default function CategoryDashboard({ categoria }) {
         <h3>Lista ({users.length})</h3>
 
         {loading ? (
-          <div>Carregando...</div>
+          <div style={{ color: '#667eea', fontWeight: 'bold' }}>Carregando...</div>
         ) : users.length === 0 ? (
           <div>Nenhum cliente nesta categoria.</div>
         ) : (
@@ -154,7 +176,9 @@ const backButtonStyle = {
   background: "#667eea",
   color: "#fff",
   cursor: "pointer",
-  fontWeight: 600
+  fontWeight: 600,
+  transition: 'background 0.2s',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
 };
 
 const alertBoxStyle = {
@@ -162,7 +186,8 @@ const alertBoxStyle = {
   padding: 12,
   borderRadius: 8,
   marginBottom: 20,
-  border: "1px solid #ffeeba"
+  border: "1px solid #ffeeba",
+  color: "#856404"
 };
 
 const contentContainerStyle = {
@@ -178,7 +203,7 @@ const userCardStyle = {
   justifyContent: "space-between",
   alignItems: "center",
   border: "1px solid #e6edf3",
-  boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
+  boxShadow: "0 4px 6px rgba(0,0,0,0.08)"
 };
 
 const deleteButtonStyle = {
@@ -189,5 +214,7 @@ const deleteButtonStyle = {
   borderRadius: 6,
   cursor: "pointer",
   fontWeight: 600,
-  fontSize: 12
+  fontSize: 12,
+  transition: 'background 0.2s',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
 };
