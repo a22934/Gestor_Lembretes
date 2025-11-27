@@ -513,7 +513,6 @@ const userCardStyle = {
   borderRadius: 12,
   display: "flex",
   justifyContent: "space-between",
-  alignItems: "center",
   border: "1px solid #e6edf3",
   boxShadow: "0 4px 6px rgba(0,0,0,0.08)",
   // ATUALIZADO: para suportar o form embutido, a direção muda
