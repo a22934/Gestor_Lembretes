@@ -162,7 +162,7 @@ const styles = {
     padding: 28,
     fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial",
     background: "linear-gradient(135deg,#667eea 0%,#764ba2 100%)",
-    color: "#fff",
+    color: "#ffffffff",
   },
   header: {
     display: "flex",

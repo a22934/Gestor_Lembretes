@@ -469,7 +469,8 @@ export default function CategoryDashboard({ categoria }) {
 /* Estilos Atualizados */
 const pageStyle = {
   minHeight: "100vh",
-  padding: 24,
+  width: "100%", 
+  boxSizing: 'border-box',
   fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial",
   background: "#f6f8fb",
 };
