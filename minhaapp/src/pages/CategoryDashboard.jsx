@@ -239,7 +239,7 @@ export default function CategoryDashboard({ categoria }) {
     const regexName = /^[a-zA-Z\u00C0-\u017F\s]*$/;
     const regexContacto = /^[0-9]{9}$/;
     
-    if (!nome || !contacto || !dataExpiracao) {
+    if (!nome || !dataExpiracao) {
       setRenewalError("Preencha todos os campos do formulário de edição.");
       return;
     }
@@ -249,9 +249,9 @@ export default function CategoryDashboard({ categoria }) {
       return;
     }
 
-    if (!regexContacto.test(contacto)) {
-      setRenewalError("Contacto deve ter 9 dígitos numéricos.");
-      return;
+    if (contacto && !regexContacto.test(contacto)) {
+  setRenewalError("O contacto deve conter exatamente 9 números.");
+  return;
     }
 
     const selectedDate = new Date(dataExpiracao);
