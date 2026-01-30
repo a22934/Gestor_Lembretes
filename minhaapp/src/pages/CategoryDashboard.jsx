@@ -52,7 +52,7 @@ export default function CategoryDashboard({ categoria }) {
     return "#38a169";
   };
   
-  // Lógica de Fetching (inalterada)
+  // Lógica de Fetching corrigida para garantir que o ID não é subscrito
   const fetchUsers = useCallback(async () => {
     if (!auth.currentUser) {
       setLoading(false);
@@ -68,7 +68,8 @@ export default function CategoryDashboard({ categoria }) {
 
     try {
       const snap = await getDocs(q);
-      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // CORREÇÃO: ...d.data() vem antes do id: d.id
+      const docs = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
 
       const usersWithDays = docs.map((u, i) => {
         let dias = null;
@@ -120,6 +121,7 @@ export default function CategoryDashboard({ categoria }) {
 
   // 1. ELIMINAR
   const handleDelete = async (id, nome) => {
+    if (!id) return;
     if (window.confirm(`Eliminar ${nome}?`)) {
       await deleteDoc(doc(db, "contacts", id));
       fetchUsers();
@@ -128,6 +130,7 @@ export default function CategoryDashboard({ categoria }) {
 
   // 2. RENOVAÇÃO (Função de execução final)
   const executeRenewal = async (id, newDate) => {
+    if (!id) return;
     if (!window.confirm("Confirmar a renovação da data de expiração?")) {
         return;
     }
@@ -164,6 +167,7 @@ export default function CategoryDashboard({ categoria }) {
   // 4. RENOVAÇÃO MANUAL (Confirmação)
   const confirmRenewal = async (id) => {
     setRenewalError("");
+    if (!id) return;
     if (!renewalDate) {
       setRenewalError("Selecione uma data válida.");
       return;
@@ -229,13 +233,19 @@ export default function CategoryDashboard({ categoria }) {
     setRenewalError(""); // Limpa erro ao digitar
   };
   
-  // 9. EDIÇÃO COMPLETA (Submissão)
+  // 9. EDIÇÃO COMPLETA (Submissão) - CORRIGIDA
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!userToEdit) return;
     
     const { id, nome, contacto, dataExpiracao } = userToEdit;
     
+    // Verificação de segurança: impede erro de "contacts has 1 segment"
+    if (!id) {
+        setRenewalError("Erro: ID do utilizador não encontrado.");
+        return;
+    }
+
     const regexName = /^[a-zA-Z\u00C0-\u017F\s]*$/;
     const regexContacto = /^[0-9]{9}$/;
     
@@ -250,8 +260,8 @@ export default function CategoryDashboard({ categoria }) {
     }
 
     if (contacto && !regexContacto.test(contacto)) {
-  setRenewalError("O contacto deve conter exatamente 9 números.");
-  return;
+      setRenewalError("O contacto deve conter exatamente 9 números.");
+      return;
     }
 
     const selectedDate = new Date(dataExpiracao);
@@ -285,7 +295,7 @@ export default function CategoryDashboard({ categoria }) {
       <div style={topBarStyle}>
         <button style={backButtonStyle} onClick={() => navigate("/dashboard")}>← Voltar</button>
         <h2 style={{ margin: 0 }}>{categoria}</h2>
-        <div style={{ width: 80 }} /> {/* Spacer para equilibrar o flex */}
+        <div style={{ width: 80 }} /> 
       </div>
 
       {alertUsers.length > 0 && (
@@ -293,7 +303,7 @@ export default function CategoryDashboard({ categoria }) {
           <strong>Atenção — próximos a expirar:</strong>
           <ul>
             {alertUsers.map(u => (
-              <li key={u.uniqueIdentifier}>
+              <li key={u.id}>
                 {u.nome} — {formatDate(u.dataExpiracao)} ({u.diasRestantes} dias)
               </li>
             ))}
@@ -311,9 +321,9 @@ export default function CategoryDashboard({ categoria }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {users.map(u => (
-              <div key={u.uniqueIdentifier} style={userCardStyle}>
+              <div key={u.id} style={userCardStyle}>
                 
-                {/* 1. Secção de Informação principal (Sempre visível) */}
+                {/* 1. Secção de Informação principal */}
                 <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <div style={{ fontWeight: 800, fontSize: 16 }}>{u.nome}</div>
                     <div style={{ color: "#666" }}>{u.contacto}</div>
@@ -325,7 +335,6 @@ export default function CategoryDashboard({ categoria }) {
                         {u.diasRestantes === null ? "Data inválida" : (u.diasRestantes < 0 ? "Expirado" : `${u.diasRestantes} dias`)}
                     </div>
                     
-                    {/* Botões de Ação */}
                     <div style={{ marginTop: 8, display: 'flex', gap: 8, justifyContent: 'flex-end', width: '100%' }}>
                         <button onClick={() => startEdit(u)} style={editButtonStyle}>Editar</button>
                         <button onClick={() => startRenewal(u)} style={renewButtonStyle}>Renovar</button>
@@ -333,7 +342,7 @@ export default function CategoryDashboard({ categoria }) {
                     </div>
                 </div>
                 
-                {/* 2. Formulário de Edição Completa (Prioridade Máxima) */}
+                {/* 2. Formulário de Edição Completa */}
                 {userToEdit && userToEdit.id === u.id && (
                     <form onSubmit={handleEditSubmit} style={fullEditFormStyle}>
                         <h4 style={{ margin: '0 0 10px 0', fontSize: 16, width: '100%', textAlign: 'left' }}>Editar Cliente</h4>
@@ -413,23 +422,13 @@ export default function CategoryDashboard({ categoria }) {
                 )}
 
 
-                {/* 4. Formulário de Renovação Manual (Quando 'Renovar' é clicado) */}
+                {/* 4. Formulário de Renovação Manual */}
                 {userToRenewId === u.id && !userToEdit && !quickRenewalPreview && (
                     <div style={renewalFormStyle}>
                         <h4 style={{ margin: '0 0 10px 0', fontSize: 14, width: '100%', textAlign: 'left' }}>Renovação Rápida</h4>
                         <div style={quickRenewalButtonsStyle}>
-                            <button 
-                                onClick={() => renewForSixMonths(u)} 
-                                style={quickRenewButtonStyle}
-                            >
-                                + 6 Meses
-                            </button>
-                            <button 
-                                onClick={() => renewForOneYear(u)} 
-                                style={quickRenewButtonStyle}
-                            >
-                                + 1 Ano
-                            </button>
+                            <button onClick={() => renewForSixMonths(u)} style={quickRenewButtonStyle}>+ 6 Meses</button>
+                            <button onClick={() => renewForOneYear(u)} style={quickRenewButtonStyle}>+ 1 Ano</button>
                         </div>
                         
                         <h4 style={{ margin: '15px 0 10px 0', fontSize: 14, width: '100%', textAlign: 'left' }}>Nova Data de Expiração (Manual)</h4>
@@ -442,18 +441,8 @@ export default function CategoryDashboard({ categoria }) {
                         />
                         {renewalError && <p style={renewalErrorStyle}>{renewalError}</p>}
                         <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-                            <button 
-                                onClick={() => confirmRenewal(u.id)} 
-                                style={confirmRenewalButtonStyle}
-                            >
-                                Confirmar Data Manual
-                            </button>
-                            <button 
-                                onClick={() => setUserToRenewId(null)} 
-                                style={cancelRenewalButtonStyle}
-                            >
-                                Cancelar
-                            </button>
+                            <button onClick={() => confirmRenewal(u.id)} style={confirmRenewalButtonStyle}>Confirmar Data Manual</button>
+                            <button onClick={() => setUserToRenewId(null)} style={cancelRenewalButtonStyle}>Cancelar</button>
                         </div>
                     </div>
                 )}
@@ -466,194 +455,21 @@ export default function CategoryDashboard({ categoria }) {
   );
 }
 
-/* Estilos Atualizados */
-const pageStyle = {
-  minHeight: "100vh",
-  width: "100%", 
-  boxSizing: 'border-box',
-  fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial",
-  background: "#f6f8fb",
-};
-
-const topBarStyle = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  marginBottom: 20,
-};
-
-const backButtonStyle = {
-  padding: "8px 12px",
-  borderRadius: 8,
-  border: "none",
-  background: "#667eea",
-  color: "#fff",
-  cursor: "pointer",
-  fontWeight: 600,
-  transition: 'background 0.2s',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-};
-
-const alertBoxStyle = {
-  background: "#fff3cd",
-  padding: 12,
-  borderRadius: 8,
-  marginBottom: 20,
-  border: "1px solid #ffeeba",
-  color: "#856404"
-};
-
-const contentContainerStyle = {
-  maxWidth: 800,
-  margin: "0 auto"
-};
-
-const userCardStyle = {
-  background: "#fff",
-  padding: 16,
-  borderRadius: 12,
-  display: "flex",
-  justifyContent: "space-between",
-  border: "1px solid #e6edf3",
-  boxShadow: "0 4px 6px rgba(0,0,0,0.08)",
-  // ATUALIZADO: para suportar o form embutido, a direção muda
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  alignItems: 'flex-start'
-};
-
-const deleteButtonStyle = {
-  background: "#fed7d7",
-  border: "none",
-  color: "#c53030",
-  padding: "6px 12px",
-  borderRadius: 6,
-  cursor: "pointer",
-  fontWeight: 600,
-  fontSize: 12,
-  transition: 'background 0.2s',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-};
-
-const renewButtonStyle = {
-  background: "#9f7aea",
-  border: "none",
-  color: "#fff",
-  padding: "6px 12px",
-  borderRadius: 6,
-  cursor: "pointer",
-  fontWeight: 600,
-  fontSize: 12,
-  transition: 'background 0.2s',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-};
-
-// NOVO ESTILO: Botão Editar
-const editButtonStyle = {
-    background: "#f6ad55",
-    border: "none",
-    color: "#fff",
-    padding: "6px 12px",
-    borderRadius: 6,
-    cursor: "pointer",
-    fontWeight: 600,
-    fontSize: 12,
-    transition: 'background 0.2s',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-};
-
-
-// Estilos de Formulário
-const renewalFormStyle = {
-    marginTop: 10,
-    paddingTop: 10,
-    borderTop: '1px solid #eee',
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-end'
-};
-
-// NOVO ESTILO: Formulário de Edição Completa (Ocupa largura total)
-const fullEditFormStyle = {
-    marginTop: 10,
-    paddingTop: 10,
-    borderTop: '1px solid #eee',
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    gap: 10 
-};
-
-const renewalInputStyle = {
-    padding: "8px",
-    borderRadius: "6px",
-    border: "1px solid #cbd5e0",
-    fontSize: "14px",
-    outline: "none",
-    width: '100%',
-    maxWidth: '100%', 
-    boxSizing: 'border-box'
-};
-
-const confirmRenewalButtonStyle = {
-    background: "#48bb78",
-    border: "none",
-    color: "#fff",
-    padding: "6px 12px",
-    borderRadius: 6,
-    cursor: "pointer",
-    fontWeight: 600,
-    fontSize: 12,
-    transition: 'background 0.2s',
-};
-
-const cancelRenewalButtonStyle = {
-    background: "#e2e8f0",
-    border: "none",
-    color: "#4a5568",
-    padding: "6px 12px",
-    borderRadius: 6,
-    cursor: "pointer",
-    fontWeight: 600,
-    fontSize: 12,
-    transition: 'background 0.2s',
-};
-
-const renewalErrorStyle = {
-    color: "#e53e3e",
-    fontSize: "12px",
-    margin: '4px 0 0 0',
-    textAlign: 'right',
-    width: '100%'
-}
-
-const quickRenewalButtonsStyle = {
-    display: 'flex',
-    gap: 10,
-    width: '100%',
-    justifyContent: 'flex-start',
-    marginBottom: 5
-}
-
-const quickRenewButtonStyle = {
-    background: "#4299e1", 
-    border: "none",
-    color: "#fff",
-    padding: "6px 12px",
-    borderRadius: 6,
-    cursor: "pointer",
-    fontWeight: 600,
-    fontSize: 12,
-    transition: 'background 0.2s',
-    flex: 1
-}
-
-// NOVO ESTILO: Texto de pré-visualização de renovação
-const renewalPreviewTextStyle = {
-    fontSize: 15,
-    margin: '10px 0',
-    width: '100%',
-    textAlign: 'left'
-};
+const pageStyle = { minHeight: "100vh", width: "100%", boxSizing: 'border-box', fontFamily: "'Inter', system-ui", background: "#f6f8fb" };
+const topBarStyle = { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 };
+const backButtonStyle = { padding: "8px 12px", borderRadius: 8, border: "none", background: "#667eea", color: "#fff", cursor: "pointer", fontWeight: 600 };
+const alertBoxStyle = { background: "#fff3cd", padding: 12, borderRadius: 8, marginBottom: 20, border: "1px solid #ffeeba", color: "#856404" };
+const contentContainerStyle = { maxWidth: 800, margin: "0 auto" };
+const userCardStyle = { background: "#fff", padding: 16, borderRadius: 12, display: "flex", justifyContent: "space-between", border: "1px solid #e6edf3", boxShadow: "0 4px 6px rgba(0,0,0,0.08)", flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start' };
+const deleteButtonStyle = { background: "#fed7d7", border: "none", color: "#c53030", padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 12 };
+const renewButtonStyle = { background: "#9f7aea", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 12 };
+const editButtonStyle = { background: "#f6ad55", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 12 };
+const renewalFormStyle = { marginTop: 10, paddingTop: 10, borderTop: '1px solid #eee', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' };
+const fullEditFormStyle = { marginTop: 10, paddingTop: 10, borderTop: '1px solid #eee', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 };
+const renewalInputStyle = { padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e0", fontSize: "14px", width: '100%', boxSizing: 'border-box' };
+const confirmRenewalButtonStyle = { background: "#48bb78", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 12 };
+const cancelRenewalButtonStyle = { background: "#e2e8f0", border: "none", color: "#4a5568", padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 12 };
+const renewalErrorStyle = { color: "#e53e3e", fontSize: "12px", margin: '4px 0 0 0', textAlign: 'right', width: '100%' };
+const quickRenewalButtonsStyle = { display: 'flex', gap: 10, width: '100%', justifyContent: 'flex-start', marginBottom: 5 };
+const quickRenewButtonStyle = { background: "#4299e1", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 12, flex: 1 };
+const renewalPreviewTextStyle = { fontSize: 15, margin: '10px 0', width: '100%', textAlign: 'left' };

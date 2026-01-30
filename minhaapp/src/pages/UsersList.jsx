@@ -7,9 +7,12 @@ export default function UsersList() {
 
   useEffect(() => {
     const fetchUsers = async () => {
+      if (!auth.currentUser) return;
       const q = query(collection(db, "contacts"), where("userId", "==", auth.currentUser.uid));
       const snapshot = await getDocs(q);
-      setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      
+      // CORREÇÃO: d.id deve ser declarado por último
+      setUsers(snapshot.docs.map(d => ({ ...d.data(), id: d.id })));
     };
     fetchUsers();
   }, []);
@@ -20,7 +23,7 @@ export default function UsersList() {
       <ul>
         {users.map(u => (
           <li key={u.id}>
-            {u.nome} - {u.contacto} - {new Date(u.dataExpiracao.seconds * 1000).toLocaleDateString()}
+            {u.nome} - {u.contacto} - {u.dataExpiracao ? new Date(u.dataExpiracao.seconds * 1000).toLocaleDateString() : "Sem data"}
           </li>
         ))}
       </ul>
