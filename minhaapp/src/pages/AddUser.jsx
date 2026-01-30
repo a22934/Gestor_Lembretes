@@ -55,8 +55,8 @@ export default function AddUser({ onUserAdded, defaultCategoria = "Piscinas" }) 
     e.preventDefault();
     setMessage("");
 
-    if (!nome || !contacto || !dataExpiracao) {
-      setMessage("Preencha todos os campos");
+    if (!nome || !dataExpiracao) {
+      setMessage("Preencha todos os campos obrigatórios.");
       return;
     }
 
@@ -65,10 +65,11 @@ export default function AddUser({ onUserAdded, defaultCategoria = "Piscinas" }) 
       return;
     }
 
-    if (!regexContacto.test(contacto)) {
-      setMessage("O contacto deve conter exatamente 9 números.");
-      return;
-    }
+    if (contacto && !regexContacto.test(contacto)) {
+  setMessage("O contacto deve conter exatamente 9 números.");
+  return;
+}
+
 
     // ❌ Data inválida
     if (dateError) {
@@ -93,7 +94,7 @@ export default function AddUser({ onUserAdded, defaultCategoria = "Piscinas" }) 
       await addDoc(collection(db, "contacts"), {
         userId: auth.currentUser.uid,
         nome,
-        contacto,
+         contacto: contacto || null,
         categoria,
         dataExpiracao: Timestamp.fromDate(selected),
         createdAt: Timestamp.now(),
@@ -146,7 +147,7 @@ export default function AddUser({ onUserAdded, defaultCategoria = "Piscinas" }) 
         <div style={{ display: "flex", gap: "10px" }}>
             <input
             type="text"
-            placeholder="Contacto (9 dígitos)"
+            placeholder="Contacto (Opcional- 9 dígitos)"
             value={contacto}
             onChange={handleContactoChange}
             maxLength={9}
