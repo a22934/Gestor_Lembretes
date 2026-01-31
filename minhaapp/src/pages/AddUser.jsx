@@ -20,8 +20,8 @@ export default function AddUser({ onUserAdded, defaultCategoria = "Piscinas" }) 
 
   const handleNomeChange = (e) => {
     const value = e.target.value;
-    // Verifica se cumpre o regex E se tem no máximo 30 caracteres
-    if (regexName.test(value) && value.length <= 30) {
+    // Verifica se cumpre o regex E se tem no máximo 50 caracteres
+    if (regexName.test(value) && value.length <= 50) {
       setNome(value);
     }
   };
@@ -137,10 +137,10 @@ export default function AddUser({ onUserAdded, defaultCategoria = "Piscinas" }) 
       >
         <input
           type="text"
-          placeholder="Nome (máx. 30 caracteres)"
+          placeholder="Nome (máx. 50 caracteres)"
           value={nome}
           onChange={handleNomeChange}
-          maxLength={30} // Limite nativo do input
+          maxLength={50} // Limite nativo do input
           style={inputStyle}
         />
 
